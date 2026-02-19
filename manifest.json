@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Auto Refresh",
+  "version": "1.1",
+  "description": "Refresh current page as per user-defined intervals in options.",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html",
+  "permissions": ["tabs", "storage", "alarms"]
+}

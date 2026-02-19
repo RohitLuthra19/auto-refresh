@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Auto Refresh Settings</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        max-width: 500px;
+      }
+      input {
+        width: 100%;
+        padding: 8px;
+        margin-top: 8px;
+      }
+      button {
+        margin-top: 12px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      .status {
+        margin-top: 10px;
+        color: green;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Settings</h2>
+
+    <label>
+      Auto Refresh Interval (seconds):
+      <input type="number" id="refreshInterval" min="5" step="1" />
+    </label>
+
+    <button id="save">Save</button>
+
+    <div class="status" id="status"></div>
+
+    <script src="options.js"></script>
+  </body>
+</html>
