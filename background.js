@@ -3,8 +3,16 @@ const ALARM_NAME = "autoRefreshCurrentPage";
 
 function scheduleRefreshAlarm() {
   chrome.storage.sync.get(
-    { refreshIntervalSeconds: DEFAULT_REFRESH_SECONDS },
-    ({ refreshIntervalSeconds }) => {
+    {
+      refreshIntervalSeconds: DEFAULT_REFRESH_SECONDS,
+      isAutoRefreshEnabled: false,
+    },
+    ({ refreshIntervalSeconds, isAutoRefreshEnabled }) => {
+      if (!isAutoRefreshEnabled) {
+        chrome.alarms.clear(ALARM_NAME);
+        return;
+      }
+
       const seconds = Math.max(5, Number(refreshIntervalSeconds) || DEFAULT_REFRESH_SECONDS);
 
       chrome.alarms.clear(ALARM_NAME, () => {
@@ -17,18 +25,24 @@ function scheduleRefreshAlarm() {
 }
 
 function reloadActiveTab() {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const tab = tabs[0];
-
-    if (!tab || !tab.id || !tab.url) {
+  chrome.storage.local.get({ targetTabId: null }, ({ targetTabId }) => {
+    if (!targetTabId) {
       return;
     }
 
-    if (!tab.url.startsWith("http://") && !tab.url.startsWith("https://")) {
-      return;
-    }
+    chrome.tabs.get(targetTabId, (tab) => {
+      if (chrome.runtime.lastError || !tab || !tab.id || !tab.url) {
+        chrome.alarms.clear(ALARM_NAME);
+        chrome.storage.sync.set({ isAutoRefreshEnabled: false });
+        return;
+      }
 
-    chrome.tabs.reload(tab.id);
+      if (!tab.url.startsWith("http://") && !tab.url.startsWith("https://")) {
+        return;
+      }
+
+      chrome.tabs.reload(tab.id);
+    });
   });
 }
 
@@ -40,8 +54,31 @@ chrome.runtime.onStartup.addListener(() => {
   scheduleRefreshAlarm();
 });
 
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type === "START_AUTO_REFRESH") {
+    const targetTabId = Number(message.tabId);
+
+    if (Number.isInteger(targetTabId)) {
+      chrome.storage.local.set({ targetTabId }, () => {
+        scheduleRefreshAlarm();
+      });
+    } else {
+      scheduleRefreshAlarm();
+    }
+    return;
+  }
+
+  if (message?.type === "STOP_AUTO_REFRESH") {
+    chrome.alarms.clear(ALARM_NAME);
+    chrome.storage.local.remove("targetTabId");
+  }
+});
+
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "sync" && changes.refreshIntervalSeconds) {
+  if (
+    area === "sync" &&
+    (changes.refreshIntervalSeconds || changes.isAutoRefreshEnabled)
+  ) {
     scheduleRefreshAlarm();
   }
 });
